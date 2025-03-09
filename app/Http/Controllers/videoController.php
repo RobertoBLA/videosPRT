@@ -30,9 +30,13 @@ abstract class Controller
             'video' => 'required|file|mimes:mp4,mov,avi|max:20480',
         ]);
 
-        if ($request->hasFile('video')) {
-            $validatedData['url'] = $request->file('video')->store('videos', 'public');
-        }
+        $videoFile = $request->file('video');
+
+        // Generate a custom file name using the 'name' field in the request
+        $fileName = $validatedData['name'] . '.' . $videoFile->getClientOriginalExtension();
+    
+        // Store the file with the custom name
+        $validatedData['url'] = $videoFile->storeAs('videos', $fileName, 'public');
 
         // Set default values for checkboxes
         $validatedData['autoplay'] = true;
@@ -63,17 +67,16 @@ abstract class Controller
         try {
             // Validate the request
             $validatedData = $request->validate([
-                'name' => 'required|string|max:255',
                 'autoplay' => 'required|boolean',
                 'loop' => 'required|boolean',
                 'auto_next' => 'required|boolean',
                 'order' => 'required|integer',  // Ensure 'order' is part of the request
             ]);
-    
+
             // Find the video by ID and update it
             $video = video::findOrFail($id);
             $video->update($validatedData);  // This will include the order field
-    
+
             // Return a success response
             return response()->json([
                 'message' => 'Video updated successfully!',
@@ -100,7 +103,7 @@ abstract class Controller
             ], 500);
         }
     }
-    
+
 
     public function updateStatus(Request $request, $id)
     {
@@ -129,4 +132,3 @@ abstract class Controller
         ]);
     }
 }
-

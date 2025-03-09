@@ -63,7 +63,6 @@
 
 <body class="d-flex align-items-center justify-content-center min-vh-100">
     <div class="bg-white p-5 rounded shadow-lg w-50">
-        <h1 class="text-2xl font-weight-bold mb-4 text-center">Reproductor PRT</h1>
         <video id="videoPlayer" class="w-100 rounded mb-4" controls autoplay muted preload="auto">
             <source src="/storage/videos/video2.mp4" type="video/mp4">
             Your browser does not support the video tag.
