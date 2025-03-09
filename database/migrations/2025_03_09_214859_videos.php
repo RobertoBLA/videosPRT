@@ -15,7 +15,7 @@ return new class extends Migration
             $table -> id();
             $table -> string('name');
             $table -> string('url');
-            $table -> integer('order');
+            $table -> integer('order')->index();
             $table -> boolean('autplay');
             $table -> boolean('loop');
             $table -> boolean('auto_next');

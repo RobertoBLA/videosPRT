@@ -4,12 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\video;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException as ValidationValidationException;
+use Illuminate\Validation\ValidationException as ValidationException;
 
 abstract class Controller
 {
-    // Placeholder image URL (can be moved to config if needed)
-    const PLACEHOLDER_IMAGE = 'https://static.thenounproject.com/png/1269202-200.png';
 
     /**
      * Display a listing of all items.
@@ -65,25 +63,30 @@ abstract class Controller
         try {
             // Validate the request
             $validatedData = $request->validate([
+                'name' => 'required|string|max:255',
                 'autoplay' => 'required|boolean',
                 'loop' => 'required|boolean',
                 'auto_next' => 'required|boolean',
+                'order' => 'required|integer',  // Ensure 'order' is part of the request
             ]);
-
+    
+            // Find the video by ID and update it
             $video = video::findOrFail($id);
-            $video->update($validatedData);
-
+            $video->update($validatedData);  // This will include the order field
+    
             // Return a success response
             return response()->json([
-                'message' => 'Item updated successfully!',
+                'message' => 'Video updated successfully!',
                 'item' => [
                     'id' => $video->id,
+                    'name' => $video->name,
                     'autoplay' => $video->autoplay,
                     'loop' => $video->loop,
-                    'auto_next' => $video->auto_next
+                    'auto_next' => $video->auto_next,
+                    'order' => $video->order,
                 ],
             ]);
-        } catch (ValidationValidationException $e) {
+        } catch (ValidationException $e) {
             // Return validation errors as JSON
             return response()->json([
                 'message' => 'Validation failed',
@@ -97,6 +100,7 @@ abstract class Controller
             ], 500);
         }
     }
+    
 
     public function updateStatus(Request $request, $id)
     {
@@ -125,3 +129,4 @@ abstract class Controller
         ]);
     }
 }
+
