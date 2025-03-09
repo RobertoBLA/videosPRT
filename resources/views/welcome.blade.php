@@ -115,17 +115,17 @@
                     <div class="section">
                         <h5>Orden</h5>
                         <div class="d-flex justify-content-start mt-3 mb-3">
-                            <div class="form-check me-3">
+                            <div class="form-check form-switch me-3">
                                 <input type="checkbox" class="form-check-input" id="autoplay-check">
                                 <label for="autoplay-check" class="form-check-label">Autoplay</label>
                             </div>
 
-                            <div class="form-check me-3">
+                            <div class="form-check form-switch me-3">
                                 <input type="checkbox" class="form-check-input" id="autoplay-loop">
                                 <label for="autoplay-loop" class="form-check-label">Loop</label>
                             </div>
 
-                            <div class="form-check me-3">
+                            <div class="form-check form-switch me-3">
                                 <input type="checkbox" class="form-check-input" id="autoplay-next">
                                 <label for="autoplay-next" class="form-check-label">Reproducir Siguiente</label>
                             </div>
@@ -133,11 +133,27 @@
 
                         <div class="list">
                             <ul id="sortable-list" class="list-group">
-                                <li class="list-group-item" data-id="1">Video 1</li>
-                                <li class="list-group-item" data-id="2">Video 2</li>
-                                <li class="list-group-item" data-id="3">Video 3</li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center" data-id="1">
+                                    <span>Video 1</span>
+                                    <div class="form-check form-switch ms-auto">
+                                        <input type="checkbox" class="form-check-input" id="checkbox1">
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center" data-id="2">
+                                    <span>Video 2</span>
+                                    <div class="form-check form-switch ms-auto">
+                                        <input type="checkbox" class="form-check-input" id="checkbox2">
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center" data-id="3">
+                                    <span>Video 3</span>
+                                    <div class="form-check form-switch ms-auto">
+                                        <input type="checkbox" class="form-check-input" id="checkbox3">
+                                    </div>
+                                </li>
                             </ul>
                         </div>
+
                         <div class="d-flex justify-content-end mt-3">
                             <button type="button" class="btn btn-primary" id="save-order">Guardar</button>
                             <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cerrar</button>
@@ -252,7 +268,6 @@
         ghostClass: 'sortable-ghost',
         chosenClass: 'sortable-chosen',
     });
-    
 </script>
 
 </html>
