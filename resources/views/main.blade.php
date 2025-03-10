@@ -116,42 +116,39 @@
                     <div class="section">
                         <h5>Orden</h5>
                         <div class="d-flex justify-content-start mt-3 mb-3">
-                            <div class="form-check form-switch me-3">
-                                <input type="checkbox" class="form-check-input" id="autoplay-check">
-                                <label for="autoplay-check" class="form-check-label">Autoplay</label>
-                            </div>
+                            <form action="{{ route('update.config') }}" method="POST" enctype="multipart/form-data" id="update-form">
+                                @csrf
+                                @method('PUT')
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch me-3">
+                                        <input type="checkbox" class="form-check-input" id="autoplay-check" name="autoplay">
+                                        <label for="autoplay-check" class="form-check-label">Autoplay</label>
+                                    </div>
 
-                            <div class="form-check form-switch me-3">
-                                <input type="checkbox" class="form-check-input" id="loop-check">
-                                <label for="loop-check" class="form-check-label">Loop</label>
-                            </div>
+                                    <div class="form-check form-switch me-3">
+                                        <input type="checkbox" class="form-check-input" id="loop-check" name="loop">
+                                        <label for="loop-check" class="form-check-label">Loop</label>
+                                    </div>
 
-                            <div class="form-check form-switch me-3">
-                                <input type="checkbox" class="form-check-input" id="auto-next-check">
-                                <label for="auto-next-check" class="form-check-label">Reproducir Siguiente</label>
-                            </div>
+                                    <div class="form-check form-switch me-3">
+                                        <input type="checkbox" class="form-check-input" id="auto-next-check" name="auto_next">
+                                        <label for="auto-next-check" class="form-check-label">Reproducir Siguiente</label>
+                                    </div>
+                                </div>
+
+                            </form>
                         </div>
 
                         <div class="list">
                             <ul id="sortable-list" class="list-group">
-                                <li class="list-group-item d-flex justify-content-between align-items-center" data-id="1">
-                                    <span>Video 1</span>
+                                @foreach($videos as $video)
+                                <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ $video->id }}">
+                                    <span>{{ $video->name }}</span>
                                     <div class="form-check form-switch ms-auto">
-                                        <input type="checkbox" class="form-check-input" id="status">
+                                        <input type="checkbox" class="form-check-input" id="video-status-{{ $video->id }}" {{ $video->status ? 'checked' : '' }}>
                                     </div>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center" data-id="2">
-                                    <span>Video 2</span>
-                                    <div class="form-check form-switch ms-auto">
-                                        <input type="checkbox" class="form-check-input" id="checkbox2">
-                                    </div>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center" data-id="3">
-                                    <span>Video 3</span>
-                                    <div class="form-check form-switch ms-auto">
-                                        <input type="checkbox" class="form-check-input" id="checkbox3">
-                                    </div>
-                                </li>
+                                @endforeach
                             </ul>
                         </div>
 
@@ -174,6 +171,20 @@
         '/storage/videos/video2.mp4',
     ];
     let currentVideoIndex = 1;
+    let config = {};
+    async function fetchConfig() {
+        try {
+            const response = await fetch('/config');
+            if (!response.ok) {
+                throw new Error('Failed to fetch config');
+            }
+            const config = await response.json();
+            return config;
+        } catch (error) {
+            console.error(error.message);
+            return {}; // Return an empty object in case of an error
+        }
+    }
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const adminModal = new bootstrap.Modal(document.getElementById('adminModal'));
@@ -184,12 +195,14 @@
     const saveButton = document.getElementById('save-video');
     const updateButton = document.getElementById('update-video');
     const createVideo = document.getElementById('save-form');
+    const updateConfig = document.getElementById('update-form');
 
 
     if (saveButton) {
         saveButton.addEventListener('click', async function() {
             event.preventDefault();
             saveButton.disabled = true;
+            updateButton.disabled = true;
 
             try {
                 const formData = new FormData(createVideo);
@@ -213,6 +226,7 @@
                 console.log('Item created successfully:', result);
                 alert('Video saved successfully!');
                 adminModal.hide();
+                window.location.reload();
                 return;
             } catch (error) {
                 console.error(error.message);
@@ -220,7 +234,6 @@
                 saveButton.disabled = false;
 
             } finally {
-                // Re-enable the submit button
                 saveButton.disabled = false;
                 return;
             }
@@ -228,9 +241,63 @@
 
     }
 
+
+    if (updateButton) {
+        updateButton.addEventListener('click', async function() {
+            event.preventDefault();
+            updateButton.disabled = true;
+            saveButton.disabled = true;
+
+            try {
+
+
+                const formData = new FormData(updateConfig);
+
+                formData.set('autoplay', document.getElementById('autoplay-check').checked ? '1' : '0');
+                formData.set('loop', document.getElementById('loop-check').checked ? '1' : '0');
+                formData.set('auto_next', document.getElementById('auto-next-check').checked ? '1' : '0');
+
+
+
+
+                const response = await fetch('/actualizar-config', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('Error response:', text);
+                    return;
+                }
+
+                const result = await response.json(); // Only parse if it's JSON
+                console.log('Item created successfully:', result);
+                alert('Video config updated successfully!');
+                adminModal.hide();
+                window.location.reload();
+                return;
+            } catch (error) {
+                console.error(error.message);
+                alert('An error occurred while updating the config.');
+                updateButton.disabled = false;
+                saveButton.disabled = false;
+                return;
+
+            } finally {
+                updateButton.disabled = false;
+                saveButton.disabled = false;
+                return;
+            }
+        });
+
+    }
     videoPlayer.addEventListener('ended', next);
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
         if (videoPlayer.muted) {
             muteButton.classList.add('bi-volume-mute-fill');
         } else {
@@ -243,6 +310,26 @@
             playButton.classList.add('bi-play-fill')
         }
 
+        try {
+            const config = await fetchConfig();
+
+            if (config.autoplay !== undefined) {
+                videoPlayer.autoplay = config.autoplay;
+                document.getElementById('autoplay-check').checked = config.autoplay;
+            }
+
+            if (config.loop !== undefined) {
+                videoPlayer.loop = config.loop;
+                document.getElementById('loop-check').checked = config.loop;
+            }
+
+            if (config.auto_next !== undefined) {
+                videoPlayer.auto_next = config.auto_next;
+                document.getElementById('auto-next-check').checked = config.auto_next;
+            }
+        } catch (error) {
+            console.error('Failed to fetch config:', error);
+        }
     });
 
     document.addEventListener('keydown', function(event) {
@@ -256,7 +343,7 @@
     openAdmin.addEventListener('click', function() {
         createVideo.reset();
         adminModal.show()
-        
+
     });
 
     function togglePlayPause() {
@@ -314,9 +401,61 @@
     }
 
     new Sortable(document.getElementById('sortable-list'), {
-        animation: 150,
-        ghostClass: 'sortable-ghost',
-        chosenClass: 'sortable-chosen',
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    onEnd: function(evt) {
+        const videoOrder = [];
+        const videoItems = evt.from.querySelectorAll('.list-group-item');
+        
+        videoItems.forEach((item, index) => {
+            const videoId = item.getAttribute('data-id');
+            videoOrder.push({
+                id: videoId,
+                order: index + 1, // 1-based index for ordering
+            });
+        });
+        
+        // Send updated order to the backend
+        updateVideoOrder(videoOrder);
+    }
+});
+
+async function updateVideoOrder(videoOrder) {
+    try {
+        const response = await fetch('/update-video-order', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ order: videoOrder })
+        });
+        
+        if (response.ok) {
+            console.log('Video order updated successfully');
+        } else {
+            console.error('Failed to update video order');
+        }
+    } catch (error) {
+        console.error('Error while updating video order:', error);
+    }
+}
+
+
+    document.getElementById('autoplay-check').addEventListener('change', function(event) {
+        config.autoplay = event.target.checked;
+        videoPlayer.autoplay = event.target.checked;
+    });
+
+    document.getElementById('loop-check').addEventListener('change', function(event) {
+        config.loop = event.target.checked;
+        videoPlayer.loop = event.target.checked;
+    });
+
+    document.getElementById('auto-next-check').addEventListener('change', function(event) {
+        config.auto_next = event.target.checked;
+        videoPlayer.auto_next = event.target.checked;
     });
 </script>
 

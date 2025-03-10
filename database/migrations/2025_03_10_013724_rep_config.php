@@ -11,14 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('repconfig', function(Blueprint $table) {
-        $table -> integer('id');
-        $table -> boolean('autoplay');
-        $table -> boolean('loop');
-        $table -> boolean('auto_next');
-        $table->timestamps();
+        Schema::create('repconfig', function (Blueprint $table) {
+            $table->id();
+            $table->boolean('autoplay')->default(true); // Default value true
+            $table->boolean('loop')->default(true);    // Default value true
+            $table->boolean('auto_next')->default(true); // Default value true
+            $table->timestamps();
         });
-        
     }
 
     /**
@@ -26,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('videos');
     }
 };

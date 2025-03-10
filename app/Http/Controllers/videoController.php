@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\video;
 use App\Models\config;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException as ValidationException;
+use Illuminate\Validation\ValidationException;
 
 class VideoController extends Controller
 {
@@ -15,9 +15,19 @@ class VideoController extends Controller
      */
     public function index()
     {
-        $videos = video::all();
+        $videos = video::orderBy('order')->get();
         return view('main', compact('videos'));
     }
+
+    public function getVideos()
+    {
+            // Fetch all videos from the database
+            $videos = Video::select('url')->get(); // Assuming you have a 'url' column for video URLs
+            return view('main', compact('videos'));
+    
+        
+    }
+
 
 
 
@@ -55,7 +65,7 @@ class VideoController extends Controller
                     'name' => $video->name,
                     'url' => $video->url,
                     'order' => $video->order,
-                    'status' => $video->order
+                    'status' => $video->status
                 ],
             ]);
         } catch (ValidationException $e) {
@@ -71,27 +81,52 @@ class VideoController extends Controller
         }
     }
 
-    public function updatePlayerConfig(Request $request)
+    public function getConfig()
     {
         try {
-            $validatedData = $request->validate([
-                'autoplay' => 'required|boolean',
-                'loop' => 'required|boolean',
-                'auto_next' => 'required|boolean',
-            ]);
-
             $config = config::first();
 
-            if ($config) {
-                $config->update($validatedData);
-            } else {
-                $config = config::create($validatedData);
+            if (!$config) {
+                return response()->json([
+                    'autoplay' => true,
+                    'loop' => true,
+                    'auto_next' => true,
+                ]);
             }
 
             return response()->json([
-                'message' => 'Media player settings updated successfully!',
-                'config' => $config,
+                'autoplay' => $config->autoplay,
+                'loop' => $config->loop,
+                'auto_next' => $config->auto_next,
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'An error occurred',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function updatePlayerConfig(Request $request)
+    {
+        try {
+            // Validate the inputs directly for '0' and '1' values
+            $validatedData = $request->validate([
+                'autoplay' => 'required|in:0,1',
+                'loop' => 'required|in:0,1',
+                'auto_next' => 'required|in:0,1',
+            ]);
+
+            $config = Config::firstOrCreate([]);
+            $config->update($validatedData);
+
+            return response()->json(['message' => 'Configuration updated successfully.']);
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'Validation failed',
