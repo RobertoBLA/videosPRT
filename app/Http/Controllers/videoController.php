@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\video;
+use App\Models\config;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException as ValidationException;
 
@@ -40,9 +41,6 @@ class VideoController extends Controller
             $validatedData['url'] = $videoFile->storeAs('videos', $fileName, 'public');
 
             // Set default values for checkboxes
-            $validatedData['autoplay'] = true;
-            $validatedData['loop'] = true;
-            $validatedData['auto_next'] = true;
             $validatedData['status'] = true;
 
             // Assign a default order if needed
@@ -57,9 +55,7 @@ class VideoController extends Controller
                     'name' => $video->name,
                     'url' => $video->url,
                     'order' => $video->order,
-                    'autoplay' => $video->autoplay,
-                    'loop' => $video->loop,
-                    'auto_next' => $video->auto_next,
+                    'status' => $video->order
                 ],
             ]);
         } catch (ValidationException $e) {
@@ -75,43 +71,55 @@ class VideoController extends Controller
         }
     }
 
-    public function update(Request $request, $id)
+    public function updatePlayerConfig(Request $request)
     {
         try {
-            // Validate the request
             $validatedData = $request->validate([
                 'autoplay' => 'required|boolean',
                 'loop' => 'required|boolean',
                 'auto_next' => 'required|boolean',
-                'order' => 'required|integer',  // Ensure 'order' is part of the request
             ]);
 
-            // Find the video by ID and update it
-            $video = video::findOrFail($id);
-            $video->update($validatedData);  // This will include the order field
+            $config = config::first();
 
-            // Return a success response
+            if ($config) {
+                $config->update($validatedData);
+            } else {
+                $config = config::create($validatedData);
+            }
+
             return response()->json([
-                'message' => 'Video updated successfully!',
-                'item' => [
-                    'id' => $video->id,
-                    'name' => $video->name,
-                    'autoplay' => $video->autoplay,
-                    'loop' => $video->loop,
-                    'auto_next' => $video->auto_next,
-                    'order' => $video->order,
-                ],
+                'message' => 'Media player settings updated successfully!',
+                'config' => $config,
             ]);
         } catch (ValidationException $e) {
-            // Return validation errors as JSON
             return response()->json([
                 'message' => 'Validation failed',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            // Handle other exceptions
             return response()->json([
                 'message' => 'An error occurred',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function updateOrder(Request $request)
+    {
+        try {
+            $orderData = $request->input('order');
+
+            foreach ($orderData as $item) {
+                video::where('id', $item['id'])->update(['order' => $item['order']]);
+            }
+
+            return response()->json([
+                'message' => 'Order updated successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'An error occurred while updating the order',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -121,7 +129,7 @@ class VideoController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $video = video::findOrFail($id);
-        $video->status = $request->status; // Store as 0 or 1
+        $video->status = $request->status;
         $video->save();
 
         return response()->json([
@@ -129,19 +137,6 @@ class VideoController extends Controller
             'item' => [
                 'status' => $video->status,
             ]
-        ]);
-    }
-
-    public function reorder(Request $request)
-    {
-        $orderData = $request->input('order');
-
-        foreach ($orderData as $item) {
-            video::where('id', $item['id'])->update(['order' => $item['order']]);
-        }
-
-        return response()->json([
-            'message' => 'Order updated successfully',
         ]);
     }
 }

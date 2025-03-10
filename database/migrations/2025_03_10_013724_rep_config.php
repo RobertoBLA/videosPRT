@@ -11,13 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('videos', function(Blueprint $table) {
-            $table -> id();
-            $table -> string('name');
-            $table -> string('url');
-            $table -> integer('order')->index();
-            $table -> boolean('status');
-            $table->timestamps();
+        Schema::create('repconfig', function(Blueprint $table) {
+        $table -> integer('id');
+        $table -> boolean('autoplay');
+        $table -> boolean('loop');
+        $table -> boolean('auto_next');
+        $table->timestamps();
         });
         
     }
@@ -27,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('videos');
+        //
     }
 };
