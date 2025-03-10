@@ -16,10 +16,11 @@ return new class extends Migration
             $table -> string('name');
             $table -> string('url');
             $table -> integer('order')->index();
-            $table -> boolean('autplay');
+            $table -> boolean('autoplay');
             $table -> boolean('loop');
             $table -> boolean('auto_next');
             $table -> boolean('status');
+            $table->timestamps();
         });
         
     }

@@ -6,7 +6,7 @@ use App\Models\video;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException as ValidationException;
 
-abstract class Controller
+class VideoController extends Controller
 {
 
     /**
@@ -14,7 +14,7 @@ abstract class Controller
      */
     public function index()
     {
-        $items = video::all();
+        $videos = video::all();
         return view('main', compact('videos'));
     }
 
@@ -25,41 +25,54 @@ abstract class Controller
      */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'video' => 'required|file|mimes:mp4,mov,avi|max:20480',
-        ]);
+        try {
+            $validatedData = $request->validate([
+                'name' => 'required|string|max:255',
+                'video' => 'required|file|mimes:mp4,mov,avi|max:20480',
+            ]);
 
-        $videoFile = $request->file('video');
+            $videoFile = $request->file('video');
 
-        // Generate a custom file name using the 'name' field in the request
-        $fileName = $validatedData['name'] . '.' . $videoFile->getClientOriginalExtension();
-    
-        // Store the file with the custom name
-        $validatedData['url'] = $videoFile->storeAs('videos', $fileName, 'public');
+            // Generate a custom file name using the 'name' field in the request
+            $fileName = $validatedData['name'] . '.' . $videoFile->getClientOriginalExtension();
 
-        // Set default values for checkboxes
-        $validatedData['autoplay'] = true;
-        $validatedData['loop'] = true;
-        $validatedData['auto_next'] = true;
+            // Store the file with the custom name
+            $validatedData['url'] = $videoFile->storeAs('videos', $fileName, 'public');
 
-        // Assign a default order if needed
-        $validatedData['order'] = video::max('order') + 1;
+            // Set default values for checkboxes
+            $validatedData['autoplay'] = true;
+            $validatedData['loop'] = true;
+            $validatedData['auto_next'] = true;
+            $validatedData['status'] = true;
 
-        $video = video::create($validatedData);
+            // Assign a default order if needed
+            $validatedData['order'] = video::max('order') + 1;
 
-        return response()->json([
-            'message' => 'Video created successfully',
-            'video' => [
-                'id' => $video->id,
-                'name' => $video->name,
-                'url' => $video->url,
-                'order' => $video->order,
-                'autoplay' => $video->autoplay,
-                'loop' => $video->loop,
-                'auto_next' => $video->auto_next,
-            ],
-        ]);
+            $video = video::create($validatedData);
+
+            return response()->json([
+                'message' => 'Video created successfully',
+                'video' => [
+                    'id' => $video->id,
+                    'name' => $video->name,
+                    'url' => $video->url,
+                    'order' => $video->order,
+                    'autoplay' => $video->autoplay,
+                    'loop' => $video->loop,
+                    'auto_next' => $video->auto_next,
+                ],
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'An error occurred',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)

@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Reproductor PRT</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
@@ -94,13 +95,14 @@
                     <div class="section">
                         <h5>Agregar Video</h5>
                         <div class="form-group">
-                            <form action="POST">
-                                <label for="recipient-name" class="col-form-label">Nombre:</label>
-                                <input type="text" class="form-control" id="video-name">
+                            <form action="{{ route('video.store') }}" method="POST" enctype="multipart/form-data" id="save-form">
+                                @csrf
+                                <label for="video-name" class="col-form-label">Nombre:</label>
+                                <input type="text" class="form-control" id="video-name" name="name">
                         </div>
                         <div class="form-group">
                             <label for="video-input" class="col-form-label">Video:</label>
-                            <input type="file" class="form-control" id="video-input">
+                            <input type="file" class="form-control" id="video-input" name="video">
                         </div>
                         <div class="d-flex justify-content-end mt-3">
                             <button type="button" class="btn btn-primary" id="save-video">Guardar</button>
@@ -120,13 +122,13 @@
                             </div>
 
                             <div class="form-check form-switch me-3">
-                                <input type="checkbox" class="form-check-input" id="autoplay-loop">
-                                <label for="autoplay-loop" class="form-check-label">Loop</label>
+                                <input type="checkbox" class="form-check-input" id="loop-check">
+                                <label for="loop-check" class="form-check-label">Loop</label>
                             </div>
 
                             <div class="form-check form-switch me-3">
-                                <input type="checkbox" class="form-check-input" id="autoplay-next">
-                                <label for="autoplay-next" class="form-check-label">Reproducir Siguiente</label>
+                                <input type="checkbox" class="form-check-input" id="auto-next-check">
+                                <label for="auto-next-check" class="form-check-label">Reproducir Siguiente</label>
                             </div>
                         </div>
 
@@ -135,7 +137,7 @@
                                 <li class="list-group-item d-flex justify-content-between align-items-center" data-id="1">
                                     <span>Video 1</span>
                                     <div class="form-check form-switch ms-auto">
-                                        <input type="checkbox" class="form-check-input" id="checkbox1">
+                                        <input type="checkbox" class="form-check-input" id="status">
                                     </div>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center" data-id="2">
@@ -154,7 +156,7 @@
                         </div>
 
                         <div class="d-flex justify-content-end mt-3">
-                            <button type="button" class="btn btn-primary" id="save-order">Guardar</button>
+                            <button type="button" class="btn btn-primary" id="update-video">Guardar</button>
                             <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cerrar</button>
                         </div>
                     </div>
@@ -173,10 +175,58 @@
     ];
     let currentVideoIndex = 1;
 
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const adminModal = new bootstrap.Modal(document.getElementById('adminModal'));
     const videoPlayer = document.getElementById('videoPlayer');
     const muteButton = document.getElementById('muteButton');
     const playButton = document.getElementById('playButton');
     const openAdmin = document.getElementById('openAdmin');
+    const saveButton = document.getElementById('save-video');
+    const updateButton = document.getElementById('update-video');
+    const createVideo = document.getElementById('save-form');
+
+
+    if (saveButton) {
+        saveButton.addEventListener('click', async function() {
+            event.preventDefault();
+            saveButton.disabled = true;
+
+            try {
+                const formData = new FormData(createVideo);
+
+                const response = await fetch('/guardar-video', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    // Handle error response
+                    const text = await response.text();
+                    console.error('Error response:', text);
+                    return;
+                }
+
+                const result = await response.json(); // Only parse if it's JSON
+                console.log('Item created successfully:', result);
+                alert('Video saved successfully!');
+                adminModal.hide();
+                return;
+            } catch (error) {
+                console.error(error.message);
+                alert('An error occurred while creating the item.');
+                saveButton.disabled = false;
+
+            } finally {
+                // Re-enable the submit button
+                saveButton.disabled = false;
+                return;
+            }
+        });
+
+    }
 
     videoPlayer.addEventListener('ended', next);
 
@@ -204,8 +254,9 @@
     });
 
     openAdmin.addEventListener('click', function() {
-        const adminModal = new bootstrap.Modal(document.getElementById('adminModal'));
+        createVideo.reset();
         adminModal.show()
+        
     });
 
     function togglePlayPause() {

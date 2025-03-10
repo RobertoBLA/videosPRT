@@ -15,7 +15,7 @@ class video extends Model
         'name',
         'url',
         'order',
-        'autplay',
+        'autoplay',
         'loop',
         'auto_next',
         'status'
