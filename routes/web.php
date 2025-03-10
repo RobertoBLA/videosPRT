@@ -8,6 +8,5 @@ Route::post('/guardar-video', [VideoController::class, 'store'])->name('video.st
 Route::get('/config', [VideoController::class, 'getConfig']);
 Route::put('/actualizar-config', [VideoController::class, 'updatePlayerConfig'])->name('update.config');
 Route::post('/update-video-order', [VideoController::class, 'updateOrder']);
-
-
-
+Route::get('/videos', [VideoController::class, 'getVideos']);
+Route::post('/update-status/{id}', [VideoController::class, 'updateStatus']);

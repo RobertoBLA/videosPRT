@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->boolean('autoplay')->default(true); // Default value true
             $table->boolean('loop')->default(true);    // Default value true
-            $table->boolean('auto_next')->default(true); // Default value true
+            $table->boolean('auto_next')->default(false); // Default value true
             $table->timestamps();
         });
     }

@@ -10,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <style>
         body {
@@ -58,6 +59,24 @@
         .sortable-drag {
             opacity: 0.7;
             /* Add opacity effect while dragging */
+        }
+
+        .disabled-row {
+            background-color: #f0f0f0 !important;
+            /* Light gray */
+            color: #999 !important;
+            /* Dim text */
+            pointer-events: none;
+            /* Disable clicks */
+            opacity: 0.6;
+            /* Make it look inactive */
+        }
+
+        .disabled-row .toggle-status {
+            pointer-events: auto;
+            /* Allow interaction with the toggle */
+            opacity: 1;
+            /* Make sure the toggle is fully visible */
         }
     </style>
 </head>
@@ -140,12 +159,13 @@
                         </div>
 
                         <div class="list">
-                            <ul id="sortable-list" class="list-group">
-                                @foreach($videos as $video)
-                                <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ $video->id }}">
+                        <ul id="sortable-list" class="list-group">
+                        @foreach($videos as $video)
+                                <li class="{{ $video->status == 0 ? 'disabled-row' : '' }}" data-video-id="${video.id}">
                                     <span>{{ $video->name }}</span>
                                     <div class="form-check form-switch ms-auto">
-                                        <input type="checkbox" class="form-check-input" id="video-status-{{ $video->id }}" {{ $video->status ? 'checked' : '' }}>
+                                        <input type="checkbox" class="form-check-input toggle-status" data-video-id="${video.id}"
+                                            data-status="${video.id}" {{ $video->status ? 'checked' : '' }}>
                                     </div>
                                 </li>
                                 @endforeach
@@ -166,12 +186,75 @@
 </body>
 
 <script>
-    const videos = [
-        '/storage/videos/video1.mp4',
-        '/storage/videos/video2.mp4',
-    ];
-    let currentVideoIndex = 1;
+    let videos = [];
+    let currentVideoIndex = 0;
     let config = {};
+    let originalConfig = {};
+
+    // Fetch videos from your API endpoint and update the DOM list
+    async function loadVideos() {
+    try {
+        const response = await fetch('/videos'); // your endpoint that returns videos as JSON
+        if (!response.ok) {
+            throw new Error('Failed to fetch videos');
+        }
+        const data = await response.json();
+
+        videos = data.filter(video => video.status);
+        
+        // Sort the videos by the order property
+        videos = data.sort((a, b) => a.order - b.order);
+
+        // Set the first video as the current video if available
+        if (videos.length > 0) {
+            currentVideoIndex = 0;
+            updateVideoSource();
+        }
+
+        const sortableList = document.getElementById('sortable-list');
+        sortableList.innerHTML = ''; // Clear the list first
+
+        // Create two arrays: one for active videos, one for disabled ones
+        const activeVideos = [];
+        const disabledVideos = [];
+
+        videos.forEach(video => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.setAttribute('data-video-id', video.id);
+            
+            // Apply the checkbox checked state
+            const isChecked = video.status ? 'checked' : '';
+            
+            // Add the disabled style class if the video is inactive
+            if (video.status === 0) {
+                li.classList.add('disabled-row'); // Add disabled class for styling
+                disabledVideos.push(li); // Store disabled video
+            } else {
+                activeVideos.push(li); // Store active video
+            }
+
+            li.innerHTML = `
+                <span>${video.name}</span>
+                <div class="form-check form-switch ms-auto">
+                    <input 
+                        type="checkbox" 
+                        class="form-check-input toggle-status" 
+                        data-video-id="${video.id}"
+                        ${isChecked}>
+                </div>
+            `;
+        });
+
+        // Append active videos first, then disabled ones to the list
+        activeVideos.forEach(li => sortableList.appendChild(li));
+        disabledVideos.forEach(li => sortableList.appendChild(li));
+
+    } catch (error) {
+        console.error('Error loading videos:', error);
+    }
+}
+
     async function fetchConfig() {
         try {
             const response = await fetch('/config');
@@ -179,6 +262,9 @@
                 throw new Error('Failed to fetch config');
             }
             const config = await response.json();
+            originalConfig = {
+                ...config
+            };
             return config;
         } catch (error) {
             console.error(error.message);
@@ -203,7 +289,6 @@
             event.preventDefault();
             saveButton.disabled = true;
             updateButton.disabled = true;
-
             try {
                 const formData = new FormData(createVideo);
 
@@ -221,7 +306,6 @@
                     console.error('Error response:', text);
                     return;
                 }
-
                 const result = await response.json(); // Only parse if it's JSON
                 console.log('Item created successfully:', result);
                 alert('Video saved successfully!');
@@ -241,25 +325,16 @@
 
     }
 
-
     if (updateButton) {
         updateButton.addEventListener('click', async function() {
             event.preventDefault();
             updateButton.disabled = true;
             saveButton.disabled = true;
-
             try {
-
-
                 const formData = new FormData(updateConfig);
-
                 formData.set('autoplay', document.getElementById('autoplay-check').checked ? '1' : '0');
                 formData.set('loop', document.getElementById('loop-check').checked ? '1' : '0');
                 formData.set('auto_next', document.getElementById('auto-next-check').checked ? '1' : '0');
-
-
-
-
                 const response = await fetch('/actualizar-config', {
                     method: 'POST',
                     headers: {
@@ -295,23 +370,22 @@
         });
 
     }
-    videoPlayer.addEventListener('ended', next);
-
     document.addEventListener('DOMContentLoaded', async function() {
+        await loadVideos();
+
         if (videoPlayer.muted) {
             muteButton.classList.add('bi-volume-mute-fill');
         } else {
             muteButton.classList.add('bi-volume-up-fill');
         }
-
-        if (videoPlayer.paused) {
-            playButton.classList.add('bi-pause-fill');
-        } else {
-            playButton.classList.add('bi-play-fill')
-        }
-
         try {
-            const config = await fetchConfig();
+            config = await fetchConfig();
+
+            if (config.autoplay) {
+                playButton.classList.add('bi-pause-fill');
+            } else {
+                playButton.classList.add('bi-play-fill');
+            }
 
             if (config.autoplay !== undefined) {
                 videoPlayer.autoplay = config.autoplay;
@@ -332,6 +406,7 @@
         }
     });
 
+    
     document.addEventListener('keydown', function(event) {
         if (event.key === 'ArrowRight') {
             next();
@@ -340,8 +415,14 @@
         }
     });
 
+    function applyConfig() {
+        document.getElementById('autoplay-check').checked = originalConfig.autoplay || false;
+        document.getElementById('loop-check').checked = originalConfig.loop || false;
+        document.getElementById('auto-next-check').checked = originalConfig.auto_next || false;
+    }
     openAdmin.addEventListener('click', function() {
         createVideo.reset();
+        applyConfig();
         adminModal.show()
 
     });
@@ -351,7 +432,6 @@
             videoPlayer.play();
             playButton.classList.remove('bi-play-fill');
             playButton.classList.add('bi-pause-fill');
-
         } else {
             videoPlayer.pause();
             playButton.classList.remove('bi-pause-fill');
@@ -396,32 +476,171 @@
     }
 
     function updateVideoSource() {
-        videoPlayer.src = videos[currentVideoIndex];
-        videoPlayer.play();
+        if (videos.length === 0) {
+            console.error('No videos available to play.');
+            return;
+        }
+        if (currentVideoIndex < 0 || currentVideoIndex >= videos.length) {
+            console.error('Invalid video index:', currentVideoIndex);
+            currentVideoIndex = 0; // Reset to the first video
+        }
+        videoPlayer.src = videos[currentVideoIndex]?.path ?? ''; // Use optional chaining and fallback
+
     }
 
+
     new Sortable(document.getElementById('sortable-list'), {
-    animation: 150,
-    ghostClass: 'sortable-ghost',
-    chosenClass: 'sortable-chosen',
-    onEnd: function(evt) {
-        const videoOrder = [];
-        const videoItems = evt.from.querySelectorAll('.list-group-item');
-        
-        videoItems.forEach((item, index) => {
-            const videoId = item.getAttribute('data-id');
-            videoOrder.push({
-                id: videoId,
-                order: index + 1, // 1-based index for ordering
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        onEnd: function(evt) {
+            const videoOrder = [];
+            const videoItems = evt.from.querySelectorAll('.list-group-item');
+
+            videoItems.forEach((item, index) => {
+                const videoId = item.getAttribute('data-id');
+                videoOrder.push({
+                    id: videoId,
+                    order: index + 1, // 1-based index for ordering
+                });
             });
+
+            // Send updated order to the backend
+            updateVideoOrder(videoOrder);
+        }
+    });
+
+
+    document.getElementById('autoplay-check').addEventListener('change', function(event) {
+        const isChecked = event.target.checked;
+        config.autoplay = event.target.checked;
+
+        if (isChecked) {
+            videoPlayer.autoplay = isChecked;
+        }
+    });
+
+    // Loop checkbox handler
+    document.getElementById('loop-check').addEventListener('change', function(event) {
+        const isChecked = event.target.checked;
+        config.loop = isChecked;
+
+        const autoNextCheck = document.getElementById('auto-next-check');
+
+        if (isChecked) {
+            // Disable 'auto-next' temporarily and uncheck it
+            autoNextCheck.disabled = true;
+            autoNextCheck.checked = false;
+            config.auto_next = false;
+            videoPlayer.auto_next = false;
+
+            videoPlayer.loop = isChecked;
+            // Re-enable after a short delay (cooldown)
+            setTimeout(() => {
+                autoNextCheck.disabled = false;
+            }, 1000); // 1-second cooldown
+        }
+
+    });
+
+    // Auto-next checkbox handler
+    document.getElementById('auto-next-check').addEventListener('change', function(event) {
+        const isChecked = event.target.checked;
+        config.auto_next = isChecked;
+        videoPlayer.auto_next = isChecked;
+
+        const loopCheck = document.getElementById('loop-check');
+
+        if (isChecked) {
+            // Disable 'loop' temporarily and uncheck it
+            loopCheck.disabled = true;
+            loopCheck.checked = false;
+            config.loop = false;
+            videoPlayer.loop = false;
+            // Re-enable after a short delay (cooldown)
+            setTimeout(() => {
+                loopCheck.disabled = false;
+            }, 1000); // 1-second cooldown
+        }
+    });
+    videoPlayer.addEventListener('ended', function() {
+        if (config.auto_next) {
+            next();
+        }
+    });
+
+
+    $(document).on('change', '.toggle-status', async function(event) {
+    const toggle = $(event.target); // directly get the target element as a jQuery object
+    const videoId = toggle.data('video-id'); // get the video ID using data-video-id
+    const status = toggle.prop('checked') ? 1 : 0; // get the checked status (1 or 0)
+    
+    const confirmClose = confirm('Are you sure you want to perform this action?');
+    if (!confirmClose) return; // if canceled, return early
+
+    try {
+        // Update status in the backend
+        const response = await fetch(`/update-status/${videoId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status
+            }),
         });
-        
-        // Send updated order to the backend
-        updateVideoOrder(videoOrder);
+
+        if (!response.ok) {
+            throw new Error('Failed to update status');
+        }
+
+        const result = await response.json();
+        console.log(result.message);
+
+        // Update the UI based on the new status
+        const row = toggle.closest('li'); // find the closest li element for this checkbox
+
+        if (status === 0) {
+            row.addClass('disabled-row'); // Add the disabled-row class to the list item
+            // Move the disabled row to the bottom of the list
+            row.detach();
+            $('#sortable-list').append(row); // Append the row to the end
+        } else {
+            row.removeClass('disabled-row'); // Remove the disabled-row class if it is enabled
+            // Move the enabled row back to its original position if necessary
+            row.detach();
+            $('#sortable-list').prepend(row); // Prepend it back to the top (or use append for order)
+        }
+
+        // Recalculate the order and send it to the backend
+        updateVideoOrder();
+
+    } catch (error) {
+        console.error("Error updating status:", error);
+        alert("Failed to update status. Please try again.");
     }
 });
 
-async function updateVideoOrder(videoOrder) {
+// Function to recalculate the order of the videos
+function updateVideoOrder() {
+    const videoOrder = [];
+    const videoItems = $('#sortable-list').children('.list-group-item');
+
+    videoItems.each((index, item) => {
+        const videoId = $(item).data('video-id');
+        videoOrder.push({
+            id: videoId,
+            order: index + 1, // 1-based index for ordering
+        });
+    });
+
+    // Send updated order to the backend
+    sendVideoOrderToServer(videoOrder);
+}
+
+// Function to send the order to the backend
+async function sendVideoOrderToServer(videoOrder) {
     try {
         const response = await fetch('/update-video-order', {
             method: 'POST',
@@ -429,9 +648,11 @@ async function updateVideoOrder(videoOrder) {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrfToken
             },
-            body: JSON.stringify({ order: videoOrder })
+            body: JSON.stringify({
+                order: videoOrder
+            })
         });
-        
+
         if (response.ok) {
             console.log('Video order updated successfully');
         } else {
@@ -443,20 +664,6 @@ async function updateVideoOrder(videoOrder) {
 }
 
 
-    document.getElementById('autoplay-check').addEventListener('change', function(event) {
-        config.autoplay = event.target.checked;
-        videoPlayer.autoplay = event.target.checked;
-    });
-
-    document.getElementById('loop-check').addEventListener('change', function(event) {
-        config.loop = event.target.checked;
-        videoPlayer.loop = event.target.checked;
-    });
-
-    document.getElementById('auto-next-check').addEventListener('change', function(event) {
-        config.auto_next = event.target.checked;
-        videoPlayer.auto_next = event.target.checked;
-    });
 </script>
 
 </html>
