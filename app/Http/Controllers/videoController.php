@@ -45,7 +45,7 @@ class VideoController extends Controller
         try {
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
-                'video' => 'required|file|mimes:mp4,mov,avi|max:20480',
+                'video' => 'required|file|mimes:mp4,mov,avi|max:409600',
             ]);
 
             $videoFile = $request->file('video');
