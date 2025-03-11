@@ -187,6 +187,7 @@
 
 <script>
     let videos = [];
+    let videosEnabled = []
     let currentVideoIndex = 0;
     let config = {};
     let originalConfig = {};
@@ -201,12 +202,14 @@
         const data = await response.json();
 
         videos = data.filter(video => video.status);
+        videosEnabled = data.filter(video => video.status === 1);
+
         
         // Sort the videos by the order property
         videos = data.sort((a, b) => a.order - b.order);
-
+        videosEnabled = videosEnabled.sort((a, b) => a.order - b.order);
         // Set the first video as the current video if available
-        if (videos.length > 0) {
+        if (videosEnabled.length > 0) {
             currentVideoIndex = 0;
             updateVideoSource();
         }
@@ -461,7 +464,7 @@
 
     function next() {
         currentVideoIndex++;
-        if (currentVideoIndex >= videos.length) {
+        if (currentVideoIndex >= videosEnabled.length) {
             currentVideoIndex = 0; // Loop to the first video
         }
         updateVideoSource();
@@ -470,21 +473,21 @@
     function previous() {
         currentVideoIndex--;
         if (currentVideoIndex < 0) {
-            currentVideoIndex = videos.length - 1; // Loop to the last video
+            currentVideoIndex = videosEnabled.length - 1; // Loop to the last video
         }
         updateVideoSource();
     }
 
     function updateVideoSource() {
-        if (videos.length === 0) {
+        if (videosEnabled.length === 0) {
             console.error('No videos available to play.');
             return;
         }
-        if (currentVideoIndex < 0 || currentVideoIndex >= videos.length) {
+        if (currentVideoIndex < 0 || currentVideoIndex >= videosEnabled.length) {
             console.error('Invalid video index:', currentVideoIndex);
             currentVideoIndex = 0; // Reset to the first video
         }
-        videoPlayer.src = videos[currentVideoIndex]?.path ?? ''; // Use optional chaining and fallback
+        videoPlayer.src = videosEnabled[currentVideoIndex]?.path ?? ''; // Use optional chaining and fallback
 
     }
 
